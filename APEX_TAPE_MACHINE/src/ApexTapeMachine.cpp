@@ -40,7 +40,7 @@ struct Smooth {
     float next(float x) { v += a * (x - v); return v; }
 };
 struct TapeChannel {
-    float env = 0.0f, low = 0.0f;
+    float env = 0.0f, low = 0.0f, prev = 0.0f;
     float wowSin = 0.0f, wowCos = 1.0f, wowStepSin = 0.0f, wowStepCos = 1.0f;
     float flutterSin = 0.0f, flutterCos = 1.0f, flutterStepSin = 0.0f, flutterStepCos = 1.0f;
     float noiseLP = 0.0f;
@@ -246,6 +246,7 @@ private:
         const std::size_t i1 = (i0 + 1) % modBuf.size();
         const float moved = lerp(modBuf[i0], modBuf[i1], readPos - static_cast<float>(i0));
         modWrite = (modWrite + 1) % modBuf.size();
+        s.prev = moved;
 
         const float wSin = s.wowSin * s.wowStepCos + s.wowCos * s.wowStepSin;
         const float wCos = s.wowCos * s.wowStepCos - s.wowSin * s.wowStepSin;
