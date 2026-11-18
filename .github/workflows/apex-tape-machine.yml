@@ -1,0 +1,61 @@
+name: Build APEX Tape Machine (MPC Live Gen 1)
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - apex-tape-machine-gen1
+    paths:
+      - "APEX_TAPE_MACHINE/**"
+      - ".github/workflows/apex-tape-machine.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out APEX project
+        uses: actions/checkout@v4
+        with:
+          ref: apex-tape-machine-gen1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Fetch official MPC Plugin Builder SDK
+        run: |
+          git clone --depth 1 https://github.com/inmusic-software/mpc-plugin-builder-sdk.git /tmp/mpc-plugin-sdk
+          mkdir -p /tmp/mpc-plugin-sdk/plugins/APEX-Tape-Machine
+          cp -a APEX_TAPE_MACHINE/. /tmp/mpc-plugin-sdk/plugins/APEX-Tape-Machine/
+
+      - name: Build native test version
+        working-directory: /tmp/mpc-plugin-sdk
+        run: python3 tools/build.py plugins/APEX-Tape-Machine --target native
+
+      - name: Run host simulator and render audio preview
+        working-directory: /tmp/mpc-plugin-sdk
+        run: |
+          .sdk-tools/host_sim plugins/APEX-Tape-Machine/build/native/apex-tape-machine.so test --seconds 6 --block 32 --wav plugins/APEX-Tape-Machine/build/first-pass-test.wav
+
+      - name: Build MPC packages
+        working-directory: /tmp/mpc-plugin-sdk
+        run: python3 tools/build.py plugins/APEX-Tape-Machine --target all
+
+      - name: Package installer ZIP
+        working-directory: /tmp/mpc-plugin-sdk
+        run: python3 tools/package.py plugins/APEX-Tape-Machine
+
+      - name: Upload plugin, preview render, and install ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: APEX-Tape-Machine-MPC-Build
+          path: |
+            /tmp/mpc-plugin-sdk/plugins/APEX-Tape-Machine/build/APEX Audio Labs - VST - APEX Tape Machine/
+            /tmp/mpc-plugin-sdk/plugins/APEX-Tape-Machine/build/first-pass-test.wav
+            /tmp/mpc-plugin-sdk/plugins/APEX-Tape-Machine/dist/*.zip
+          if-no-files-found: error
+          compression-level: 0
