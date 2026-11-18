@@ -10,8 +10,8 @@
   "category": "Effect",
   "file32": "VST/apex-tape-machine-arm32.so",
   "file64": "VST/apex-tape-machine-arm64.so",
-  "description": "Two-inch 24-track tape-inspired coloration with an integrated acoustic echo chamber.",
+  "description": "Two-inch 24-track analog tape-inspired saturation, compression, wow/flutter and acoustic echo chamber effect for MPC.",
   "author": "APEX Audio Labs",
-  "url": "",
+  "url": "https://github.com/404Audio/APEX-FX12/tree/apex-tape-machine-gen1/APEX_TAPE_MACHINE",
   "license": "Proprietary"
 }
