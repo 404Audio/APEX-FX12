@@ -18,7 +18,7 @@ namespace {
 constexpr float kTwoPi = 6.28318530717958647692f;
 
 enum Param {
-    kInput = 0, kOutput, kDrive, kTapeMix, kBias, kComp, kSpeed, kFormula,
+    kInput = 0, kOutput, kDrive, kTapeMix, kBias, kComp, kSpeed, kFormula, kPath,
     kWow, kFlutter, kHiss, kCrosstalk, kHfShape, kTapeOn,
     kChamberOn, kSend, kChamberMix, kSize, kDecay, kDamping, kPreDelay, kWidth,
     kNumParams
@@ -38,7 +38,7 @@ struct Smooth {
     float next(float x) { v += a * (x - v); return v; }
 };
 struct TapeChannel {
-    float env = 0.0f, low = 0.0f, prev = 0.0f;
+    float env = 0.0f, low = 0.0f, syncLow = 0.0f, reproLow = 0.0f, prev = 0.0f;
     float wowSin = 0.0f, wowCos = 1.0f, wowStepSin = 0.0f, wowStepCos = 1.0f;
     float flutterSin = 0.0f, flutterCos = 1.0f, flutterStepSin = 0.0f, flutterStepCos = 1.0f;
 };
@@ -55,7 +55,8 @@ public:
         addParam(mpc::floatParam("bias", "Bias", 0.0f, 100.0f, 52.0f, "%", 0));
         addParam(mpc::floatParam("comp", "Comp", 0.0f, 100.0f, 28.0f, "%", 0));
         addParam(mpc::choiceParam("speed", "Speed", {"15 IPS", "30 IPS"}, 1));
-        addParam(mpc::choiceParam("formula", "Formula", {"456", "900", "GP9"}, 0));
+        addParam(mpc::choiceParam("formula", "Formula", {"250", "456", "900", "GP9"}, 1));
+        addParam(mpc::choiceParam("path", "Path", {"Input", "Sync", "Repro"}, 2));
         addParam(mpc::floatParam("wow", "Wow", 0.0f, 100.0f, 3.0f, "%", 0));
         addParam(mpc::floatParam("flutter", "Flutter", 0.0f, 100.0f, 2.0f, "%", 0));
         addParam(mpc::floatParam("hiss", "Hiss", 0.0f, 100.0f, 0.0f, "%", 0));
@@ -127,6 +128,7 @@ public:
         const float hf = get(kHfShape) * 0.01f;
         const int speed = getInt(kSpeed);
         const int formula = getInt(kFormula);
+        const int path = getInt(kPath);
         const bool tapeOn = getBool(kTapeOn);
         const bool chamberOn = getBool(kChamberOn);
         const float send = get(kSend) * 0.01f;
@@ -136,7 +138,7 @@ public:
         const float predelay = get(kPreDelay) * 0.001f;
         const float width = get(kWidth) * 0.01f;
 
-        const float formulaHeadroom = formula == 0 ? 0.94f : (formula == 1 ? 1.07f : 1.17f);
+        const float formulaHeadroom = formula == 0 ? 0.90f : (formula == 1 ? 0.94f : (formula == 2 ? 1.07f : 1.17f));
         const float cutoff = (speed == 0 ? 14500.0f : 19000.0f) * (0.76f + hf * 0.24f);
         const float lp = 1.0f - std::exp(-kTwoPi * std::min(cutoff, sr_ * 0.44f) / sr_);
         const float wowHz = speed == 0 ? 0.17f : 0.23f;
@@ -163,6 +165,10 @@ public:
                 float inR = r + tape_[0].prev * cross;
                 float wetL = tapeSample(inL, tape_[0], modL_, modWriteL_, drive, bias, comp, formulaHeadroom, lp, wow, flutter, speed == 0);
                 float wetR = tapeSample(inR, tape_[1], modR_, modWriteR_, drive, bias, comp, formulaHeadroom, lp, wow, flutter, speed == 0);
+                // Monitor topology: Input monitors the input electronics; Sync and Repro
+                // use distinct playback-head response voicings after the record/tape stage.
+                wetL = playbackPath(wetL, tape_[0], path, speed);
+                wetR = playbackPath(wetR, tape_[1], path, speed);
                 // Independent pseudo-random generators keep stereo noise decorrelated.
                 wetL += noiseSample(hiss, noiseL_);
                 wetR += noiseSample(hiss, noiseR_);
@@ -252,6 +258,17 @@ private:
         const float fCos = s.flutterCos * s.flutterStepCos - s.flutterSin * s.flutterStepSin;
         s.flutterSin = fSin; s.flutterCos = fCos;
         return moved;
+    }
+    float playbackPath(float x, TapeChannel& s, int path, int speed) {
+        if (path == 0) return x; // Input: direct input-monitor path
+        const float syncCoeff = speed == 0 ? 0.105f : 0.145f;
+        const float reproCoeff = speed == 0 ? 0.135f : 0.185f;
+        const float coeff = path == 1 ? syncCoeff : reproCoeff;
+        float& memory = path == 1 ? s.syncLow : s.reproLow;
+        memory += coeff * (x - memory);
+        // Distinct head/electronics voicing placeholder. Replace with measured
+        // NAB/CCIR/AES record/playback transfer functions during calibration work.
+        return lerp(x, memory, path == 1 ? 0.075f : 0.11f);
     }
     float noiseSample(float amount, uint32_t& state) {
         state ^= state << 13; state ^= state >> 17; state ^= state << 5;
