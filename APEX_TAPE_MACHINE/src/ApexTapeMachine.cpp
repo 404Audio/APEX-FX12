@@ -204,27 +204,47 @@ private:
         i.tailSamples = 0;
         return i;
     }
-    float tapeSample(float x, TapeChannel& s, float drive, float bias, float comp,
-                     float headroom, float lpCoef, float wow, float flutter, float wowHz, float flutterHz) {
+    void setLfoSteps(TapeChannel& s, float wowHz, float flutterHz) {
+        const float w = kTwoPi * wowHz / sr_;
+        const float f = kTwoPi * flutterHz / sr_;
+        s.wowStepSin = std::sin(w); s.wowStepCos = std::cos(w);
+        s.flutterStepSin = std::sin(f); s.flutterStepCos = std::cos(f);
+    }
+    float tapeSample(float x, TapeChannel& s, std::vector<float>& modBuf, std::size_t& modWrite,
+                     float drive, float bias, float comp, float headroom, float lpCoef,
+                     float wow, float flutter, bool slowSpeed) {
         const float pre = 1.0f + drive * 7.0f;
         const float offset = (bias - 0.5f) * 0.14f;
         const float z = std::tanh((x * pre + offset) / headroom);
         const float zero = std::tanh(offset / headroom);
         float sat = (z - zero) / std::max(0.25f, 1.0f - std::fabs(zero));
         s.low += lpCoef * (sat - s.low);
-        sat = lerp(sat, s.low, (getInt(kSpeed) == 0 ? 0.14f : 0.025f));
+        sat = lerp(sat, s.low, slowSpeed ? 0.14f : 0.025f);
         const float mag = std::fabs(sat);
         const float envCoef = mag > s.env ? 0.004f : 0.0005f;
         s.env += envCoef * (mag - s.env);
         sat /= (1.0f + comp * std::max(0.0f, s.env - 0.22f) * 2.4f);
-        s.wowPhase += kTwoPi * wowHz / sr_;
-        s.flutterPhase += kTwoPi * flutterHz / sr_;
-        if (s.wowPhase > kTwoPi) s.wowPhase -= kTwoPi;
-        if (s.flutterPhase > kTwoPi) s.flutterPhase -= kTwoPi;
-        const float mod = std::sin(s.wowPhase) * wow * 0.0012f + std::sin(s.flutterPhase) * flutter * 0.00032f;
-        const float out = sat + (sat - s.prev) * mod * sr_;
-        s.prev = sat;
-        return out;
+
+        // True variable-delay wow/flutter: changing tape speed moves the read head.
+        const float delayMs = 4.2f + s.wowSin * wow * 0.95f + s.flutterSin * flutter * 0.22f;
+        const float delaySamples = clampf(delayMs * 0.001f * sr_, 1.0f, static_cast<float>(modBuf.size() - 3));
+        modBuf[modWrite] = sat;
+        float readPos = static_cast<float>(modWrite) - delaySamples;
+        const float len = static_cast<float>(modBuf.size());
+        while (readPos < 0.0f) readPos += len;
+        while (readPos >= len) readPos -= len;
+        const std::size_t i0 = static_cast<std::size_t>(readPos);
+        const std::size_t i1 = (i0 + 1) % modBuf.size();
+        const float moved = lerp(modBuf[i0], modBuf[i1], readPos - static_cast<float>(i0));
+        modWrite = (modWrite + 1) % modBuf.size();
+
+        const float wSin = s.wowSin * s.wowStepCos + s.wowCos * s.wowStepSin;
+        const float wCos = s.wowCos * s.wowStepCos - s.wowSin * s.wowStepSin;
+        s.wowSin = wSin; s.wowCos = wCos;
+        const float fSin = s.flutterSin * s.flutterStepCos + s.flutterCos * s.flutterStepSin;
+        const float fCos = s.flutterCos * s.flutterStepCos - s.flutterSin * s.flutterStepSin;
+        s.flutterSin = fSin; s.flutterCos = fCos;
+        return moved;
     }
     float noiseSample(float amount, uint32_t& state) {
         state ^= state << 13; state ^= state >> 17; state ^= state << 5;
@@ -238,8 +258,8 @@ private:
     float sr_ = 44100.0f;
     TapeChannel tape_[2]{};
     Smooth in_{}, out_{}, tapeMix_{}, chamberMix_{};
-    std::vector<float> delayL_, delayR_, preL_, preR_;
-    std::size_t write_ = 0, preWrite_ = 0;
+    std::vector<float> delayL_, delayR_, preL_, preR_, modL_, modR_;
+    std::size_t write_ = 0, preWrite_ = 0, modWriteL_ = 0, modWriteR_ = 0;
     float dampL_ = 0.0f, dampR_ = 0.0f;
     uint32_t noiseL_ = 0x1234567u, noiseR_ = 0x7654321u;
 };
