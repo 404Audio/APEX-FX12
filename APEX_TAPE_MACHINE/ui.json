@@ -1,33 +1,115 @@
 {
   "kit": "amber",
   "pages": [
-    { "name": "TAPE", "controls": [
-      { "param": "Input", "widget": "fader" },
-      { "param": "Output", "widget": "fader" },
-      { "param": "Drive", "widget": "knob" },
-      { "param": "Tape Mix", "widget": "fader" },
-      { "param": "Bias", "widget": "knob" },
-      { "param": "Comp", "widget": "knob" },
-      { "param": "Speed", "widget": "switch" },
-      { "param": "Formula", "widget": "slider", "overlay": "menu" }
-    ]},
-    { "name": "MOTION", "controls": [
-      { "param": "Wow", "widget": "knob" },
-      { "param": "Flutter", "widget": "knob" },
-      { "param": "Hiss", "widget": "knob" },
-      { "param": "Crosstalk", "widget": "knob" },
-      { "param": "HF Shape", "widget": "knob" },
-      { "param": "Tape On", "widget": "switch" }
-    ]},
-    { "name": "CHAMBER", "controls": [
-      { "param": "Chamber", "widget": "switch" },
-      { "param": "Send", "widget": "fader" },
-      { "param": "Mix", "widget": "fader" },
-      { "param": "Size", "widget": "knob" },
-      { "param": "Decay", "widget": "knob" },
-      { "param": "Damping", "widget": "knob" },
-      { "param": "PreDelay", "widget": "knob" },
-      { "param": "Width", "widget": "knob" }
-    ]}
-  ]
+    {
+      "name": "TAPE",
+      "controls": [
+        {
+          "param": "Input",
+          "widget": "fader"
+        },
+        {
+          "param": "Output",
+          "widget": "fader"
+        },
+        {
+          "param": "Drive",
+          "widget": "knob"
+        },
+        {
+          "param": "Tape Mix",
+          "widget": "fader"
+        },
+        {
+          "param": "Bias",
+          "widget": "knob"
+        },
+        {
+          "param": "Comp",
+          "widget": "knob"
+        },
+        {
+          "param": "Speed",
+          "widget": "switch"
+        },
+        {
+          "param": "Formula",
+          "widget": "switch",
+          "overlay": "menu"
+        }
+      ]
+    },
+    {
+      "name": "MOTION",
+      "controls": [
+        {
+          "param": "Wow",
+          "widget": "knob"
+        },
+        {
+          "param": "Flutter",
+          "widget": "knob"
+        },
+        {
+          "param": "Hiss",
+          "widget": "knob"
+        },
+        {
+          "param": "Crosstalk",
+          "widget": "knob"
+        },
+        {
+          "param": "HF Shape",
+          "widget": "knob"
+        },
+        {
+          "param": "Tape On",
+          "widget": "switch"
+        }
+      ]
+    },
+    {
+      "name": "CHAMBER",
+      "controls": [
+        {
+          "param": "Chamber",
+          "widget": "switch"
+        },
+        {
+          "param": "Send",
+          "widget": "fader"
+        },
+        {
+          "param": "Mix",
+          "widget": "fader"
+        },
+        {
+          "param": "Size",
+          "widget": "knob"
+        },
+        {
+          "param": "Decay",
+          "widget": "knob"
+        },
+        {
+          "param": "Damping",
+          "widget": "knob"
+        },
+        {
+          "param": "PreDelay",
+          "widget": "knob"
+        },
+        {
+          "param": "Width",
+          "widget": "knob"
+        }
+      ]
+    }
+  ],
+  "style": {
+    "background": "ff17130d",
+    "accent": "ffd49a3a",
+    "text": "fff2e5c9",
+    "muted": "ff87775e"
+  }
 }
