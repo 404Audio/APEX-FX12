@@ -15,9 +15,7 @@
 #include <algorithm>
 
 namespace {
-constexpr float kPi = 3.14159265358979323846f;
 constexpr float kTwoPi = 6.28318530717958647692f;
-constexpr int kNumChannels = 2;
 
 enum Param {
     kInput = 0, kOutput, kDrive, kTapeMix, kBias, kComp, kSpeed, kFormula,
