@@ -43,7 +43,6 @@ struct TapeChannel {
     float env = 0.0f, low = 0.0f, prev = 0.0f;
     float wowSin = 0.0f, wowCos = 1.0f, wowStepSin = 0.0f, wowStepCos = 1.0f;
     float flutterSin = 0.0f, flutterCos = 1.0f, flutterStepSin = 0.0f, flutterStepCos = 1.0f;
-    float noiseLP = 0.0f;
 };
 }
 
@@ -147,7 +146,7 @@ public:
         setLfoSteps(tape_[0], wowHz, flutterHz);
         setLfoSteps(tape_[1], wowHz, flutterHz);
         const float feedback = 0.16f + decay * 0.76f;
-        const float dampCoef = 0.035f + damping * 0.68f;
+        const float dampCoef = 0.72f - damping * 0.68f;
         const std::size_t loopN = delayL_.size();
         const std::size_t preN = preL_.size();
         const std::size_t preSamples = std::min<std::size_t>(static_cast<std::size_t>(predelay * sr_), preN - 1);
@@ -178,8 +177,8 @@ public:
                 preL_[preWrite_] = l * send; preR_[preWrite_] = r * send;
                 preWrite_ = (preWrite_ + 1) % preN;
 
-                const std::size_t tapA = std::max<std::size_t>(1, loopN / (5 + static_cast<int>(size * 6)));
-                const std::size_t tapB = std::max<std::size_t>(1, loopN / (9 + static_cast<int>(size * 9)));
+                const std::size_t tapA = std::max<std::size_t>(1, static_cast<std::size_t>(loopN * (0.10f + size * 0.18f)));
+                const std::size_t tapB = std::max<std::size_t>(1, static_cast<std::size_t>(loopN * (0.22f + size * 0.22f)));
                 const float earlyL = delayL_[(write_ + loopN - tapA) % loopN] * 0.22f
                                    + delayR_[(write_ + loopN - tapB) % loopN] * 0.15f;
                 const float earlyR = delayR_[(write_ + loopN - tapA) % loopN] * 0.22f
