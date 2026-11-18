@@ -40,8 +40,9 @@ struct Smooth {
     float next(float x) { v += a * (x - v); return v; }
 };
 struct TapeChannel {
-    float env = 0.0f, low = 0.0f, prev = 0.0f;
-    float wowPhase = 0.0f, flutterPhase = 0.0f;
+    float env = 0.0f, low = 0.0f;
+    float wowSin = 0.0f, wowCos = 1.0f, wowStepSin = 0.0f, wowStepCos = 1.0f;
+    float flutterSin = 0.0f, flutterCos = 1.0f, flutterStepSin = 0.0f, flutterStepCos = 1.0f;
     float noiseLP = 0.0f;
 };
 }
@@ -92,6 +93,9 @@ public:
         delayL_.assign(n, 0.0f); delayR_.assign(n, 0.0f);
         const std::size_t pn = static_cast<std::size_t>(sr_ * 0.25f) + 8;
         preL_.assign(pn, 0.0f); preR_.assign(pn, 0.0f);
+        const std::size_t mn = static_cast<std::size_t>(sr_ * 0.012f) + 8;
+        modL_.assign(mn, 0.0f); modR_.assign(mn, 0.0f);
+        modWriteL_ = modWriteR_ = 0;
         write_ = preWrite_ = 0;
         reset();
     }
@@ -102,6 +106,9 @@ public:
         std::fill(delayR_.begin(), delayR_.end(), 0.0f);
         std::fill(preL_.begin(), preL_.end(), 0.0f);
         std::fill(preR_.begin(), preR_.end(), 0.0f);
+        std::fill(modL_.begin(), modL_.end(), 0.0f);
+        std::fill(modR_.begin(), modR_.end(), 0.0f);
+        modWriteL_ = modWriteR_ = 0;
         write_ = preWrite_ = 0; dampL_ = dampR_ = 0.0f;
         in_.snap(gainDb(get(kInput))); out_.snap(gainDb(get(kOutput)));
         tapeMix_.snap(get(kTapeMix) * 0.01f);
@@ -137,6 +144,8 @@ public:
         const float lp = 1.0f - std::exp(-kTwoPi * std::min(cutoff, sr_ * 0.44f) / sr_);
         const float wowHz = speed == 0 ? 0.17f : 0.23f;
         const float flutterHz = speed == 0 ? 5.2f : 6.7f;
+        setLfoSteps(tape_[0], wowHz, flutterHz);
+        setLfoSteps(tape_[1], wowHz, flutterHz);
         const float feedback = 0.16f + decay * 0.76f;
         const float dampCoef = 0.035f + damping * 0.68f;
         const std::size_t loopN = delayL_.size();
@@ -155,8 +164,8 @@ public:
             if (tapeOn) {
                 float inL = l + tape_[1].prev * cross;
                 float inR = r + tape_[0].prev * cross;
-                float wetL = tapeSample(inL, tape_[0], drive, bias, comp, formulaHeadroom, lp, wow, flutter, wowHz, flutterHz);
-                float wetR = tapeSample(inR, tape_[1], drive, bias, comp, formulaHeadroom, lp, wow, flutter, wowHz, flutterHz);
+                float wetL = tapeSample(inL, tape_[0], modL_, modWriteL_, drive, bias, comp, formulaHeadroom, lp, wow, flutter, speed == 0);
+                float wetR = tapeSample(inR, tape_[1], modR_, modWriteR_, drive, bias, comp, formulaHeadroom, lp, wow, flutter, speed == 0);
                 // Independent pseudo-random generators keep stereo noise decorrelated.
                 wetL += noiseSample(hiss, noiseL_);
                 wetR += noiseSample(hiss, noiseR_);
