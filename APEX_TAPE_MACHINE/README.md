@@ -11,7 +11,7 @@ An original behavioral model inspired by a two-inch, 24-track analog tape workfl
 
 The plugin has three native MPC pages with amber analog-style controls and Q-Link mappings:
 
-- **TAPE:** Input, Output, Drive, Tape Mix, Bias, Compression, 15/30 IPS, tape formula (456 / 900 / GP9).
+- **TAPE:** Input, Output, Drive, Tape Mix, Bias, Compression, Path (Input / Sync / Repro), 15/30 IPS, tape formula (250 / 456 / 900 / GP9).
 - **MOTION:** Wow, Flutter, Hiss, Crosstalk, HF Shape, Tape On/Off.
 - **CHAMBER:** Send, Wet/Dry Mix, Size, Decay, Chamber On/Off, Damping, Pre-delay, Width.
 
@@ -46,7 +46,7 @@ The SDK's normal package build also creates an AArch64 companion binary. Gen 1 i
 
 ## Modeling notes
 
-The tape stage models stereo tape behavior and the interaction of a stereo pair of tracks; crosstalk provides a linked-track character. It does not instantiate 24 independent audio channels. Wow/flutter use short variable-delay modulation. The echo chamber is an original damped feedback/early-reflection network, not an impulse-response capture of a particular physical room.
+The tape stage models stereo tape behavior and the interaction of a stereo pair of tracks; crosstalk provides a linked-track character. Input / Sync / Repro path selection is present; Sync and Repro currently use preliminary distinct playback voicings that still require measured calibration. It does not instantiate 24 independent audio channels. Wow/flutter use short variable-delay modulation. The echo chamber is an original damped feedback/early-reflection network, not an impulse-response capture of a particular physical room.
 
 ## DSP implementation
 
